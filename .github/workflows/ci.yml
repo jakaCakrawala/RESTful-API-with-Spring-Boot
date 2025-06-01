@@ -1,0 +1,55 @@
+name: Java CI/CD with Maven
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Build with Maven
+      run: mvn -B package --file inventory-api/pom.xml
+      
+    - name: Run Tests
+      run: mvn -B test --file inventory-api/pom.xml
+      
+    - name: Generate Test Report
+      run: mvn surefire-report:report --file inventory-api/pom.xml
+      
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: inventory-api/target/site/surefire-report.html
+
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Build and Package
+      run: |
+        cd inventory-api
+        mvn clean package -DskipTests
+        
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: inventory-api
+        path: inventory-api/target/*.jar 
